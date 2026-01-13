@@ -1,0 +1,123 @@
+// Configuración de Prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// MODELO: USUARIOS
+// ============================================
+model Usuario {
+     id              Int              @id @default(autoincrement())
+     nombre          String
+     email           String           @unique
+     password        String
+     rol             String           @default("recepcionista")
+     activo          Boolean          @default(true)
+     telefono        String?
+     tareasLimpieza  TareaLimpieza[]  // AGREGAR ESTA LÍNEA
+     createdAt       DateTime         @default(now())
+     updatedAt       DateTime         @updatedAt
+   }
+
+
+// ============================================
+// MODELO: EDIFICIOS
+// ============================================
+model Edificio {
+  id            Int            @id @default(autoincrement())
+  nombre        String
+  direccion     String
+  ciudad        String         @default("Asunción")
+  totalPisos    Int            @default(1)
+  departamentos Departamento[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+// ============================================
+// MODELO: DEPARTAMENTOS
+// ============================================
+model Departamento {
+     id              Int              @id @default(autoincrement())
+     numero          String
+     edificio        Edificio         @relation(fields: [edificioId], references: [id])
+     edificioId      Int
+     piso            Int
+     habitaciones    Int
+     banos           Int
+     precio          Float
+     estado          String           @default("disponible")
+     descripcion     String?
+     requiereLimpieza Boolean         @default(false)
+     reservas        Reserva[]
+     tareasLimpieza  TareaLimpieza[]  // AGREGAR ESTA LÍNEA
+     createdAt       DateTime         @default(now())
+     updatedAt       DateTime         @updatedAt
+   }
+
+// ============================================
+// MODELO: CLIENTES
+// ============================================
+model Cliente {
+  id        Int       @id @default(autoincrement())
+  nombre    String
+  telefono  String
+  whatsapp  String?
+  email     String?
+  cedula    String?
+  direccion String?
+  notas     String?
+  reservas  Reserva[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+// ============================================
+// MODELO: RESERVAS
+// ============================================
+model Reserva {
+  id              Int          @id @default(autoincrement())
+  departamento    Departamento @relation(fields: [departamentoId], references: [id])
+  departamentoId  Int
+  cliente         Cliente      @relation(fields: [clienteId], references: [id])
+  clienteId       Int
+  fechaInicio     DateTime
+  fechaFin        DateTime
+  estado          String       @default("pendiente")
+  monto           Float
+  pagado          Boolean      @default(false)
+  metodoPago      String?
+  fechaPago       DateTime?
+  checkIn         DateTime?
+  checkOut        DateTime?
+  notasCheckIn    String?
+  notasCheckOut   String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+// ============================================
+   // MODELO: TAREAS DE LIMPIEZA 🧹
+   // ============================================
+   model TareaLimpieza {
+     id                Int          @id @default(autoincrement())
+     departamento      Departamento @relation(fields: [departamentoId], references: [id])
+     departamentoId    Int
+     asignadoA         Usuario?     @relation(fields: [asignadoAId], references: [id])
+     asignadoAId       Int?
+     estado            String       @default("pendiente")
+     prioridad         String       @default("media")
+     tipoLimpieza      String       @default("check_out")
+     notas             String?
+     problemaReportado String?
+     fechaAsignacion   DateTime     @default(now())
+     fechaInicio       DateTime?
+     fechaCompletado   DateTime?
+     createdAt         DateTime     @default(now())
+     updatedAt         DateTime     @updatedAt
+   }
