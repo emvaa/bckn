@@ -127,7 +127,21 @@
          });
        }
 
-       const reservasConflictivas = await prisma.reserva.findMany({
+      // Regla: permitir crear reservas el MISMO DÍA del check-out de otra reserva.
+      // Para eso evaluamos conflictos por DÍA (checkout es "día exclusivo"), ignorando horas.
+      const startOfDay = (d: Date) => {
+        const x = new Date(d);
+        x.setHours(0, 0, 0, 0);
+        return x;
+      };
+
+      const nuevaInicio = new Date(fechaInicio as string);
+      const nuevaFin = new Date(fechaFin as string);
+      const nuevaInicioDia = startOfDay(nuevaInicio);
+      const nuevaFinDia = startOfDay(nuevaFin);
+
+      // Traer candidatas (por datetime) y luego filtrar con la regla por día
+      const reservasCandidatas = await prisma.reserva.findMany({
          where: {
            departamentoId: parseInt(departamentoId as string),
            estado: {
@@ -146,7 +160,14 @@
          }
        });
 
-       const disponible = reservasConflictivas.length === 0;
+      const reservasConflictivas = reservasCandidatas.filter(r => {
+        const rInicioDia = startOfDay(new Date(r.fechaInicio));
+        const rFinDiaExclusive = startOfDay(new Date(r.fechaFin)); // checkout = día exclusivo
+        // conflicto si hay solapamiento de días: [inicio, finExclusive)
+        return nuevaInicioDia < rFinDiaExclusive && nuevaFinDia > rInicioDia;
+      });
+
+      const disponible = reservasConflictivas.length === 0;
 
        res.json({
          disponible,
@@ -200,8 +221,19 @@
          return res.status(404).json({ error: 'Cliente no encontrado' });
        }
 
-       // Verificar disponibilidad
-       const reservasConflictivas = await prisma.reserva.findMany({
+      // Verificar disponibilidad (misma regla por DÍA: se permite empezar el día del check-out)
+      const startOfDay = (d: Date) => {
+        const x = new Date(d);
+        x.setHours(0, 0, 0, 0);
+        return x;
+      };
+
+      const nuevaInicio = new Date(fechaInicio);
+      const nuevaFin = new Date(fechaFin);
+      const nuevaInicioDia = startOfDay(nuevaInicio);
+      const nuevaFinDia = startOfDay(nuevaFin);
+
+      const reservasCandidatas = await prisma.reserva.findMany({
          where: {
            departamentoId: parseInt(departamentoId),
            estado: {
@@ -219,6 +251,12 @@
            ]
          }
        });
+
+      const reservasConflictivas = reservasCandidatas.filter(r => {
+        const rInicioDia = startOfDay(new Date(r.fechaInicio));
+        const rFinDiaExclusive = startOfDay(new Date(r.fechaFin)); // checkout = día exclusivo
+        return nuevaInicioDia < rFinDiaExclusive && nuevaFinDia > rInicioDia;
+      });
 
        if (reservasConflictivas.length > 0) {
          return res.status(400).json({ 
