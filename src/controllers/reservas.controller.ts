@@ -258,10 +258,13 @@
         return nuevaInicioDia < rFinDiaExclusive && nuevaFinDia > rInicioDia;
       });
 
-       if (reservasConflictivas.length > 0) {
+       // Permitir crear reserva aunque haya conflictos si viene el flag "forzar"
+       // Esto permite que el usuario decida crear la reserva de todas formas
+       if (reservasConflictivas.length > 0 && !req.body.forzar) {
          return res.status(400).json({ 
            error: 'El departamento no está disponible en esas fechas',
-           conflictos: reservasConflictivas
+           conflictos: reservasConflictivas,
+           puedeForzar: true // Indicar que se puede forzar
          });
        }
 
